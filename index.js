@@ -122,6 +122,12 @@ function hyperRequire(id) {
 
     registerHandler(newModule);
 
+    // @ts-ignore
+    if (oldModule.detach) {
+      // @ts-ignore
+      oldModule.detach();
+    }
+
     patchModule(oldModule.exports, exp);
     newModule.exports = oldModule.exports;
     newModule.parent = oldModule.parent;
