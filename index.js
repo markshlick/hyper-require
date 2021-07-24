@@ -116,40 +116,49 @@ function hyperRequire(id) {
   deregisterHandler(oldModule);
   delete require.cache[resolvedId];
 
-  try {
-    const exp = require(id);
-    const newModule = require.cache[resolvedId];
+  const load = () => {
+    try {
+      const exp = require(id);
+      const newModule = require.cache[resolvedId];
 
-    registerHandler(newModule);
+      registerHandler(newModule);
 
-    // @ts-ignore
-    if (oldModule.detach) {
+      patchModule(oldModule.exports, exp);
+      newModule.exports = oldModule.exports;
+      newModule.parent = oldModule.parent;
+      newModule.children = oldModule.children;
+
       // @ts-ignore
-      oldModule.detach();
-    }
+      if (oldModule.dispose) {
+        // @ts-ignore
+        oldModule.dispose(newModule);
+      }
 
-    patchModule(oldModule.exports, exp);
-    newModule.exports = oldModule.exports;
-    newModule.parent = oldModule.parent;
-    newModule.children = oldModule.children;
-
-    // @ts-ignore
-    if (oldModule.dispose) {
-      // @ts-ignore
-      oldModule.dispose(newModule);
-    }
-
-    onHyperRequireHandlers.forEach((handler) => {
-      setImmediate(() => {
-        handler(resolvedId, exp);
+      onHyperRequireHandlers.forEach((handler) => {
+        setImmediate(() => {
+          handler(resolvedId, exp);
+        });
       });
-    });
 
-    return oldModule.exports;
-  } catch (error) {
-    console.error(error);
-    require.cache[resolvedId] = oldModule;
-    return oldModule.exports;
+      return oldModule.exports;
+    } catch (error) {
+      console.error(error);
+      require.cache[resolvedId] = oldModule;
+      return oldModule.exports;
+    }
+  };
+
+  // @ts-ignore
+  if (oldModule.detach) {
+    // @ts-ignore
+    const r = oldModule.detach();
+    if (r.then) {
+      r.then(load);
+    } else {
+      load();
+    }
+  } else {
+    load();
   }
 }
 
