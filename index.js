@@ -5,7 +5,10 @@ const onHyperRequireHandlers = new Map();
 
 // TODO: expose an option
 function shouldReloadPath(filePath) {
-  return !filePath.includes("node_modules");
+  return (
+    !Module.builtinModules.includes(filePath) &&
+    !filePath.includes("node_modules")
+  );
 }
 
 function deregisterHandler(mod) {
@@ -38,12 +41,12 @@ function patchLoader() {
 
     // @ts-ignore
     const filePath = Module._resolveFilename(request, parent, isMain);
-    if (modExps && shouldReloadPath(filePath) && !expsMeta.has(modExps)) {
-      registerModule(modExps);
-    }
 
-    const mod = require.cache[filePath];
-    registerHandler(mod);
+    if (modExps && !expsMeta.has(modExps) && shouldReloadPath(filePath)) {
+      registerModule(modExps);
+      const mod = require.cache[filePath];
+      registerHandler(mod);
+    }
 
     return modExps;
   };
