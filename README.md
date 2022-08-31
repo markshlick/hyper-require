@@ -88,16 +88,18 @@ HyperRequire checks for a `onHyperRequire` function on every module and will cal
 
 ### Side-effects during module loading
 
-Please be mindful that HyperRequire will re-evaluate the module's underlying file, which could cause problems with async behavior and "hot" handles like DB connections.
+Please be mindful that HyperRequire will re-evaluate the module's underlying file, which could lead to contention over sockets from web servers or database connections.
 
-To gracefully wind down these types of resources, HyperRequire will call `module.dispose` on an old module after a new one is successfully loaded.
+To gracefully wind down these types of resources, HyperRequire will call `module.detach` on the running module **before** it's replacement is loaded, and `module.dispose` on the previous module **after** a new one is successfully loaded.
 
 ```js
 let i = 0;
 
 const timer = setInterval(() => console.log(i++), 1000);
 
-module.dispose = () => clearInterval(timer);
+module.detach = () => clearInterval(timer);
+
+module.dispose = () => {}
 ```
 
 ### Destructuring primitives
